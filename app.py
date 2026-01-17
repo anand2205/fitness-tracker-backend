@@ -13,18 +13,27 @@ from models import db, User, Workout
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# JWT config
+# =========================
+# JWT CONFIG
+# =========================
 app.config["JWT_SECRET_KEY"] = "super-secret-key"
 jwt = JWTManager(app)
 
-# Initialize DB
+# =========================
+# DATABASE INIT
+# =========================
 db.init_app(app)
 
-
-@app.route("/")
-def index():
-    return jsonify({"app": "fitness_tracker", "status": "running"})
-
+# =========================
+# ROOT / HEALTH CHECK
+# =========================
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({
+        "app": "fitness_tracker",
+        "status": "running",
+        "message": "Backend is live"
+    })
 
 # =========================
 # REGISTER
@@ -54,7 +63,6 @@ def register():
 
     return jsonify({"message": "User registered successfully"}), 201
 
-
 # =========================
 # LOGIN
 # =========================
@@ -75,7 +83,6 @@ def login():
         "role": user.role
     }), 200
 
-
 # =========================
 # TRAINER → ASSIGN WORKOUT
 # =========================
@@ -85,7 +92,7 @@ def add_workout():
     trainer_id = int(get_jwt_identity())
     trainer = User.query.get(trainer_id)
 
-    if trainer.role != "trainer":
+    if not trainer or trainer.role != "trainer":
         return jsonify({"message": "Only trainers can create workouts"}), 403
 
     data = request.get_json()
@@ -110,7 +117,6 @@ def add_workout():
 
     return jsonify({"message": "Workout assigned to client"}), 201
 
-
 # =========================
 # CLIENT → VIEW WORKOUTS
 # =========================
@@ -120,7 +126,7 @@ def get_workouts():
     user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
 
-    if user.role != "client":
+    if not user or user.role != "client":
         return jsonify({"message": "Only clients can view workouts"}), 403
 
     workouts = Workout.query.filter_by(user_id=user_id).all()
@@ -134,9 +140,8 @@ def get_workouts():
         } for w in workouts
     ])
 
-
 # =========================
-# START SERVER
+# START APP
 # =========================
 if __name__ == "__main__":
     with app.app_context():
